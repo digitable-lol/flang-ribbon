@@ -1,0 +1,96 @@
+# Происхождение / Provenance
+
+## Откуда взята арифметика
+
+Арифметика ленты — десять чистых функций, которые решают, какой ширины колонка,
+какой высоты окно в ней, куда встаёт новое окно, насколько проматывается лента
+и сколько края отнимает панель, — **перенесена из
+[`digitable-lol/digitwm`](https://github.com/digitable-lol/digitwm)**, файл
+`ribbon.c`, функции `ribbon_policy_*`, коммит
+`bfd5d85ef0417c38ff24ab0224844696b06fab06`.
+
+Перенос — не копирование текста: ни одной строки C из `digitwm` в этом дереве
+нет. Здесь та же арифметика заново записана на flang, и совпадение доказано
+прогоном обеих реализаций на 526 871 входе (`tools/compare.sh`), а не
+утверждением. Но право на арифметику это не меняет, и происхождение названо
+здесь честно.
+
+The ribbon arithmetic — ten pure functions deciding column width, window height,
+where a new window goes, how far the ribbon scrolls and how much of an edge a
+panel takes — was **transferred from
+[`digitable-lol/digitwm`](https://github.com/digitable-lol/digitwm)**, file
+`ribbon.c`, functions `ribbon_policy_*`, commit `bfd5d85`. Not a single line of
+its C is in this tree: the same arithmetic is written afresh in flang, and the
+equivalence is proved by running both over 526,871 inputs
+(`tools/compare.sh`), not asserted.
+
+## Под какой лицензией она там лежит
+
+`ribbon.c` — **свой файл digitwm, а не наследие cwm**. Он добавлен коммитом от
+3 августа 2026 (`git log --diff-filter=A --follow -- ribbon.c`), и в списке 26
+унаследованных файлов, который digitwm ведёт в собственном `NOTICE`, его нет.
+
+Отсюда важное следствие: **ISC-наследия cwm в этом репозитории нет вовсе.**
+digitwm — форк [cwm (calmwm)](https://github.com/leahneukirchen/cwm) из базовой
+системы OpenBSD, и 25 из 26 унаследованных им файлов лежат под **ISC**, а один
+(`queue.h`) — под **BSD-3-Clause**. Ни один из этих 26 файлов здесь не
+использован, ни целиком, ни частью: перенесены только `ribbon_policy_*`, а они
+написаны в digitwm с нуля.
+
+`ribbon.c` is **digitwm's own file, not cwm heritage** — added on 3 August 2026,
+and absent from the list of 26 inherited files that digitwm keeps in its own
+`NOTICE`. Consequently **there is no ISC-licensed cwm heritage in this
+repository at all**: of digitwm's inherited files 25 are ISC and one
+(`queue.h`) is BSD-3-Clause, and none of the 26 is used here.
+
+## Одна нестыковка в шапке эталона — названа, а не замолчана
+
+Шапка `ribbon.c` несёт **два** лицензионных сообщения сразу:
+
+* строку `SPDX-License-Identifier: BSD-2-Clause`;
+* и ниже — прозаическое уведомление, дословно совпадающее с формулой **ISC**
+  («Permission to use, copy, modify, and distribute this software for any
+  purpose with or without fee is hereby granted…»), то есть с той, что стоит в
+  шапках унаследованных от cwm файлов.
+
+Обе лицензии разрешительны и совместимы, и требование у них одно и то же:
+сохранить уведомление об авторстве. Поэтому здесь сохранены **оба**:
+
+    Copyright (c) 2026 Digitable <https://digitable.life>
+
+Какое из двух сообщений в `ribbon.c` считать верным — вопрос к digitwm, а не к
+этому дереву; здесь записано то, что там написано. Если digitwm сведёт шапку к
+одной лицензии, эта запись обновится.
+
+The header of `ribbon.c` carries **two** licence statements at once: an SPDX tag
+saying BSD-2-Clause and, below it, a prose notice whose wording is verbatim
+**ISC**. Both are permissive, both compatible, and both ask the same thing —
+keep the copyright notice — so the notice above is kept. Which of the two is
+authoritative is a question for digitwm, not for this tree.
+
+## Лицензия этого дерева
+
+Всё, что здесь написано, — **BSD-2-Clause**, правообладатель
+Marat Zimnurov <zimtir@mail.ru>. Дословный текст — в [`LICENSE`](LICENSE),
+по-человечески — в [`LICENSE-RU.md`](LICENSE-RU.md). Заголовок SPDX стоит в
+каждом файле с исходником; прозу и `.gitignore` покрывает `LICENSE`.
+
+**Копилефтных лицензий в дереве нет ни одной**, и это не обещание, а проверка:
+`tools/licensing.flang` читает каждый файл из `git ls-files` и ищет их приметы.
+
+Everything here is **BSD-2-Clause**, copyright Marat Zimnurov
+<zimtir@mail.ru>. No copyleft anywhere in the tree — checked, not promised, by
+`tools/licensing.flang`.
+
+## Чей приём взят
+
+Устройство репозитория — ярлыки вместо `Makefile`, лицензионный сторож на
+flang, примеры эталона внутри модулей — взято у
+[`digitable-lol/flang-tui`](https://github.com/digitable-lol/flang-tui) и
+[`digitable-lol/digitdisk`](https://github.com/digitable-lol/digitdisk).
+`tools/licensing.flang` — прямой потомок сторожа из `flang-tui`, с добавленными
+`.c` и `.h` в списке чужих языков. Оба репозитория — BSD-2-Clause того же
+правообладателя.
+
+Способ выкусывать десять политик из `ribbon.c` в отдельную единицу трансляции
+взят у самого digitwm — `tools/no-x-build.sh`, проход 4.
