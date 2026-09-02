@@ -221,13 +221,17 @@ v, err := flang.DolyaPary(ctx, rt.Number(28), rt.Number(28), rt.Number(40), rt.N
   `ribbon_float_toggle`, `ribbon_group_update`, `ribbon_col_visible`,
   `ribbon_col_onribbon`, `ribbon_win_away`, `ribbon_focus_extent`,
   `ribbon_new`, `ribbon_free`, `ribbon_find`, `ribbon_current`,
-  `ribbon_scroll`, `ribbon_sync`. Они зовут контракт `wsi.h`:
-  `client_insert`, `client_show`, `client_hide`, `client_raise`,
-  `client_resize`, `client_focus`, `client_ptr_warp`, `client_ptr_save`,
-  `client_current`, `client_geom_current`, `client_class_hint`,
-  `client_set_active`, `client_init`, `client_remove`, `screen_init`,
-  `screen_update`, `screen_relayout`, `region_pointer`, `group_update`,
-  `wsi_settle` — двадцать имён.
+  `ribbon_scroll`, `ribbon_sync`. Они зовут контракт `wsi.h` — и это
+  **одиннадцать** имён, посчитанных `nm -u ribbon.o`, а не грепом по тексту
+  (греп даёт двадцать, потому что `ribbon_client_insert` содержит
+  `client_insert` подстрокой):
+
+      client_current  client_geom_current  client_hide  client_ptr_save
+      client_ptr_warp client_raise         client_resize
+      client_set_active client_show        region_pointer  wsi_settle
+
+  Сверх них объектнику нужны `Conf`, `conf_ribbonrule_match`, `xcalloc`,
+  `xstrdup`, `free` и `strcmp` — настройки и память, тоже хозяйские.
 
 **Ни одна строка из этих 1 245 сюда не перенесена, и это не небрежность.**
 Библиотека, которая знает про `client_show`, перестаёт быть библиотекой:

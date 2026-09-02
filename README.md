@@ -225,13 +225,18 @@ functions, and not one of them is arithmetic:
   `ribbon_float_toggle`, `ribbon_group_update`, `ribbon_col_visible`,
   `ribbon_col_onribbon`, `ribbon_win_away`, `ribbon_focus_extent`,
   `ribbon_new`, `ribbon_free`, `ribbon_find`, `ribbon_current`,
-  `ribbon_scroll`, `ribbon_sync`. They call the `wsi.h` contract:
-  `client_insert`, `client_show`, `client_hide`, `client_raise`,
-  `client_resize`, `client_focus`, `client_ptr_warp`, `client_ptr_save`,
-  `client_current`, `client_geom_current`, `client_class_hint`,
-  `client_set_active`, `client_init`, `client_remove`, `screen_init`,
-  `screen_update`, `screen_relayout`, `region_pointer`, `group_update`,
-  `wsi_settle` — twenty names.
+  `ribbon_scroll`, `ribbon_sync`. They call the `wsi.h` contract — and that is
+  **eleven** names, counted by `nm -u ribbon.o` rather than by grepping the
+  text (grep says twenty, because `ribbon_client_insert` contains
+  `client_insert` as a substring):
+
+      client_current  client_geom_current  client_hide  client_ptr_save
+      client_ptr_warp client_raise         client_resize
+      client_set_active client_show        region_pointer  wsi_settle
+
+  Beyond those the object file needs `Conf`, `conf_ribbonrule_match`,
+  `xcalloc`, `xstrdup`, `free` and `strcmp` — configuration and memory,
+  the host's as well.
 
 **Not one line of those 1,245 was brought here, and that is not carelessness.**
 A library that knows about `client_show` stops being a library and becomes half
