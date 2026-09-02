@@ -55,7 +55,7 @@ after a close — are this library.
 | `flang/placement.flang` | «Placement» | where a newly mapped window goes, what gets focus after a close, the names of places and rules | `ribbon_policy_insert`, `ribbon_policy_close` |
 | `flang/strut.flang` | «Strut» | whether a strut and a region meet at all, how much a panel takes off an edge, what two facing panels are left with | `ribbon_policy_span`, `ribbon_policy_reserve`, `ribbon_policy_pair` |
 
-1,033 lines of flang (764 without comments and blanks) are emitted into 2,023
+1,035 lines of flang (764 without comments and blanks) are emitted into 2,023
 lines of C (`.c` plus `.h`, shared runtime excluded) and 2,024 lines of Go.
 
 ## What backs that up
@@ -86,6 +86,7 @@ Result of the run on 2 September 2026:
 ```
 сверено входов: 526871
 расхождений:    0
+теорема пары («Пара вместе», счётчика в эталоне нет): проверена на 4536 входах, не сработала 0 раз
 потоки ответов совпали побайтно: строк 526871, байт 14458160 (cmp)
 напечатанное в Go совпало с эталоном побайтно: строк 526871 (cmp)
 ```
@@ -94,6 +95,13 @@ The inputs are not random: they sit on boundaries and around them — zeros, one
 negatives, inverted spans, presets past the end of the table, flags valued `−1`,
 `2`, `7` (the reference treats any non-zero as true, and that is checked rather
 than assumed).
+
+One function has no counterpart in the reference at all: `«Пара вместе»` adds up
+both halves of a pair and carries a theorem neither half can state on its own —
+two panels together never take more of a region than it has. There is nothing to
+diff it against, so it is checked by itself, inside the same run: the postcondition
+is re-evaluated in the emitted code (the ledger honestly calls it a grid, not a
+proof), and over 4,536 inputs it never fired.
 
 ### 2. The reference's answers live as examples inside the modules
 

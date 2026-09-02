@@ -171,6 +171,7 @@ static fl_arena arena;
 static fl_ctx ctx;
 static FILE *fa, *fb;
 static long long total, bad;
+static long long pair_total, pair_bad;
 
 static void
 render(char *buf, size_t n, fl_status st, fl_value v, const fl_error *e)
@@ -504,13 +505,39 @@ main(int argc, char **argv)
 	}
 	}
 
+	/* 12. «Пара вместе» — единственная функция без счётчика в эталоне.
+	 * Она складывает обе доли пары и несёт теорему, которую порознь ни одна
+	 * половина высказать не может. Сверять не с чем, поэтому проверяется
+	 * собой: постусловие пересчитывается в напечатанном коде, и требуется,
+	 * чтобы оно не сработало НИ РАЗУ. */
+	{
+	static const int nf[] = { -100, -5, -1, 0, 1, 2, 8, 20, 28, 39, 40, 41, 50,
+	    60, 100, 200, 400, 800 };
+	static const int ln[] = { -100, -5, -1, 0, 1, 2, 20, 39, 40, 41, 56, 100,
+	    400, 800 };
+	for (i0 = 0; i0 < N(nf); i0++)
+	for (i1 = 0; i1 < N(nf); i1++)
+	for (i2 = 0; i2 < N(ln); i2++) {
+		fresh();
+		st = strut_para_vmeste(&ctx, fl_number(nf[i0]), fl_number(nf[i1]),
+		    fl_number(ln[i2]), &r, &e);
+		pair_total++;
+		if (st != FL_OK) {
+			pair_bad++;
+			if (pair_bad <= 5)
+				fprintf(stderr, "ТЕОРЕМА ПАРЫ НЕ ДЕРЖИТ  %d %d %d: %s\n",
+				    nf[i0], nf[i1], ln[i2], e.code ? e.code : "?");
+		}
+	}
+	}
+
 	fl_arena_release(&arena);
 	if (fclose(fa) != 0 || fclose(fb) != 0) {
 		perror("fclose");
 		return 2;
 	}
-	printf("%lld %lld\n", total, bad);
-	return bad == 0 ? 0 : 1;
+	printf("%lld %lld %lld %lld\n", total, bad, pair_total, pair_bad);
+	return (bad == 0 && pair_bad == 0) ? 0 : 1;
 }
 EOF
 
@@ -526,12 +553,15 @@ code=$?
 set -e
 total=$(echo "$out" | awk '{print $1}')
 bad=$(echo "$out" | awk '{print $2}')
+pair_total=$(echo "$out" | awk '{print $3}')
+pair_bad=$(echo "$out" | awk '{print $4}')
 
 echo
 echo "сверено входов: $total"
 echo "расхождений:    $bad"
+echo "теорема пары («Пара вместе», счётчика в эталоне нет): проверена на $pair_total входах, не сработала $pair_bad раз"
 
-if [ "$code" != "0" ] || [ "${bad:-1}" != "0" ]; then
+if [ "$code" != "0" ] || [ "${bad:-1}" != "0" ] || [ "${pair_bad:-1}" != "0" ]; then
   err "СВЕРКА НЕ СОШЛАСЬ. Первые расхождения:"
   head -20 "$work/diffs.txt" >&2
   exit 1
