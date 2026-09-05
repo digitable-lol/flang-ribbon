@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   linux:
-    name: Linux — проверка, ведомость, печать, сверка с эталоном
+    name: Linux — проверка, ведомость, печать, сверка с эталоном и с живой лентой
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -79,6 +79,25 @@ jobs:
           bad=$(git ls-files | grep -E '\.(go|py|pyi|js|mjs|cjs|ts|tsx|jsx|c|h)$' || true)
           if [ -n "$bad" ]; then echo "$bad"; echo "файл на чужом языке" >&2; exit 1; fi
           echo "чужого языка в дереве нет"
+
+      # Живой оконный менеджер: он нужен и сверке лент, и восьмому
+      # отрицательному контролю. Собирается из клона digitwm - тремя
+      # библиотеками X и yacc, - а арифметику ленты он берёт из СВОЕГО
+      # подмодуля, на своём отпечатке: эталон обязан оставаться эталоном.
+      - name: Оконный менеджер digitwm — для сверки лент
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libx11-dev libxft-dev libxrandr-dev bison
+          git clone --recursive --depth 1 https://github.com/digitable-lol/digitwm.git /tmp/digitwm
+          make -C /tmp/digitwm/ribbon-flang emit
+          make -C /tmp/digitwm
+          echo "DIGITWM=/tmp/digitwm" >> "$GITHUB_ENV"
+
+      - name: Оба обещания ленты на 896 лентах
+        run: ./ярлык сетка
+
+      - name: Лента до вставки и после — против живого cwm, побайтно
+        run: ./ярлык вставка
 
       - name: Отрицательный контроль — каждую проверку ломают и требуют красного
         run: ./ярлык наоборот

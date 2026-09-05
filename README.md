@@ -44,9 +44,18 @@ it on both axes. Two invariants drive everything else:
 
 The scalar decisions behind those invariants — how far to scroll, how wide a
 column is, how tall a window in it is, where a new window goes, what gets focus
-after a close — are this library.
+after a close — are four modules of this library.
 
-### Four modules, 21 functions
+**The invariants themselves are the fifth.** A scalar cannot state them: it takes
+a few numbers, returns one, and a promise on it speaks about the result of ONE
+call. Both invariants above speak about the RELATION OF TWO STATES of the ribbon
+— before a window is inserted and after — and until `flang/ribbon.flang` there
+was no such subject as "a ribbon" in this tree at all. There is now: a ribbon is
+a value (a row of columns, the index of the focused one, two offsets),
+`«Вставить окно»` is a function from ribbon to ribbon, and both invariants stand
+on it as two `обеспечивает`.
+
+### Five modules, 60 functions
 
 | File | Module | What it decides | Reference in `ribbon.c` |
 |---|---|---|---|
@@ -54,9 +63,17 @@ after a close — are this library.
 | `flang/geometry.flang` | «Geometry» | column width from a share and from a preset, window height in a stack, C99 integer division | `ribbon_policy_width`, `ribbon_policy_height` |
 | `flang/placement.flang` | «Placement» | where a newly mapped window goes, what gets focus after a close, the names of places and rules | `ribbon_policy_insert`, `ribbon_policy_close` |
 | `flang/strut.flang` | «Strut» | whether a strut and a region meet at all, how much a panel takes off an edge, what two facing panels are left with | `ribbon_policy_span`, `ribbon_policy_reserve`, `ribbon_policy_pair` |
+| `flang/ribbon.flang` | «Ribbon» | the ribbon as a value: measuring the row and the stacks, scrolling on both axes, inserting a window, and **both invariants** | `ribbon_measure`, `ribbon_scroll`, `ribbon_focus_extent`, `ribbon_insert` |
 
-1,035 lines of flang (764 without comments and blanks) are emitted into 2,023
-lines of C (`.c` plus `.h`, shared runtime excluded) and 2,024 lines of Go.
+1,713 lines of flang (1,186 without comments and blanks) are emitted into 5,969
+lines of C (`.c` plus `.h`, shared runtime excluded) and 5,610 lines of Go.
+
+**«Ribbon» is a model, not a transfer, and those are different things.** The four
+modules above stand in place of their `ribbon_policy_*` one for one: what is
+emitted from them digitwm CALLS. Nobody calls `«Вставить окно»`: the host's
+`ribbon_insert()` moves pointers around queues, while here it is written down
+what happens to the numbers. Hence it is checked differently — by diffing whole
+ribbons (`./ярлык вставка`), not by substitution.
 
 ## What backs that up
 
@@ -112,8 +129,8 @@ push**:
 ./ярлык проверка
 ```
 
-`flang test` evaluates **100** examples inside the modules and another 36 in the
-guard and the shortcut table. Their numbers are the reference's answers at the
+`flang test` evaluates **199** examples inside the modules and another 141 in the
+guard, the ribbon-diff plan and the shortcut table. Their numbers are the reference's answers at the
 boundaries, taken from that same run.
 
 **What an example does not catch:** it pins a value, but it will not notice if
@@ -127,8 +144,8 @@ digitwm itself changes. Whoever edits a checked function re-runs `./ярлык
 ```
 
 `flang check --proof` for every module. It says what carries each promise:
-termination of all 21 functions is "proved by composition"; of 27 assertions the
-kernel proves 6, while the remaining 21 are carried by **a grid of the examples**
+termination of all 60 functions is "proved by composition"; of 31 assertions the
+kernel proves 6, while the remaining 25 are carried by **a grid of the examples**
 — and the ledger says so in plain words: "no violations were looked for; this is
 not a proof". Which is true, and is written that way so that nobody mistakes a
 grid for a theorem.
@@ -145,7 +162,7 @@ here, and the negative control below shows that very trap live.
 ```
 
 A check nothing can break is indistinguishable from a missing one.
-`tools/negative.sh` breaks a **copy** of the tree seven times and demands red
+`tools/negative.sh` breaks a **copy** of the tree nineteen times and demands red
 each time:
 
 | What is broken | What must go red |
@@ -157,8 +174,42 @@ each time:
 | a broken module | `flang emit` — with not a single file written |
 | a planted copyleft file, `.py`, `.c` | the licence guard (three times) |
 | the gap arithmetic off by one | `tools/compare.sh` — naming the discrepancies |
+| **C's answer** shifted by one — seven mutants, one per kind of output line | `./ярлык вставка` — naming the scenario and the line |
+| an invariant tightened into a falsehood | the walk over 896 ribbons — by the postcondition, named |
 
 The working tree is never touched: `git status` is empty afterwards.
+
+### 5. The ribbon before and after insertion — against the live window manager
+
+```sh
+DIGITWM=/path/to/clone ./ярлык вставка
+```
+
+The run against the reference (1) diffs NUMBERS: policy by policy, numbers in,
+one number out. Here a WHOLE RIBBON is diffed, and twice over: the state before
+a window is inserted and the state after. The answer comes from
+`ribbon_insert()` — the very call the MapRequest handler makes — through
+`cwm -C "layout-probe …"`, with no display opened and no window touched.
+
+**Two byte streams are diffed, not field by field.** The spec PRINTS exactly the
+text `layout-probe` prints, and the texts are compared whole: a hand-written list
+of fields would stay silent about a field left out of it. Twenty scenarios, zero
+discrepancies.
+
+### 6. The grid on which both invariants are recomputed
+
+```sh
+./ярлык сетка
+```
+
+The ledger honestly calls both invariants a grid, not a theorem. Then the grid
+must have a size: `tools/grid.flang` walks **896 ribbons** — settings × column
+rows × focus indices × stale offsets on both axes × two insertion places — and
+calls `«Вставить окно»` on each. The postcondition is recomputed on every return;
+one that fires brings the run down. None fired.
+
+**What the grid does not prove:** it is finite. An invariant true on all these
+ribbons may be false on one that is not in it.
 
 ## How to use it
 
@@ -285,14 +336,16 @@ you can read your way to.
 
 | Shortcut | What for |
 |---|---|
-| `проверка` | parsing, types, totality and examples: modules, guard, shortcuts |
+| `проверка` | parsing, types, totality and examples: modules, guard, diff plan, shortcuts |
 | `ведомость` | what carries each promise: proved, grid of N, or merely declared |
 | `печать` | emit to Go and C and build both: `gofmt`, `go vet`, `go build`, `cc` |
 | `сверка` | the run against digitwm: byte for byte, C and Go, needs the network |
 | `лицензии` | the licence guard: SPDX, copyleft, foreign languages |
 | `наоборот` | negative control: every check is broken and must go red |
+| `вставка` | the ribbon before and after insertion against the live `cwm`, byte for byte; needs `DIGITWM` |
+| `сетка` | both invariants recomputed on 896 ribbons; half a minute |
 | `чисто` | remove what was emitted |
-| `всё` | the whole run in order, the diff last |
+| `всё` | the whole run in order; `вставка` last — it needs a foreign binary |
 
 The `ярлык` shell holds no list of commands at all: it asks the binary and runs
 the answer. The list is `ярлыки.flang`, a program — type-checked, with examples,
