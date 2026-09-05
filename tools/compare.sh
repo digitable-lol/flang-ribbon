@@ -602,6 +602,7 @@ if ! command -v go >/dev/null 2>&1; then
 fi
 
 echo
+gomods=0
 for f in "$ROOT"/flang/*.flang; do
   m=$(basename "$f" .flang)
   "$FLANG" emit "$f" --target go --out "$work/go-$m" >"$work/emit.log" 2>&1 || {
@@ -613,8 +614,10 @@ for f in "$ROOT"/flang/*.flang; do
     sed -i.bak "s|flangprogram|flang$m|g" "$x" && rm -f "$x.bak"
   done
   ( cd "$work/go-$m" && go build -o "$work/gocli-$m" ./cli )
+  gomods=$((gomods + 1))
 done
-echo "напечатано в Go: 4 модуля, прогонщики собраны"
+echo "напечатано в Go модулей: $gomods, прогонщики собраны (сверяются четыре: у"
+echo "  «Ribbon» счётчика в эталоне нет — его сверяет ./ярлык вставка)"
 
 # Из потока эталона делаем запросы к напечатанному Go: имя функции flang плюс
 # доводы числами. Порядок строк сохраняется в order.txt, чтобы потом собрать
