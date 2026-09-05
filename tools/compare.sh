@@ -25,7 +25,8 @@
 #
 # Переменные:
 #   FLANG        путь к компилятору (иначе $FLANG_HOME/bootstrap/flang, иначе PATH)
-#   DIGITWM      готовый клон эталона (иначе клонируется по сети)
+#   DIGITWM      клон эталона как КЭШ: ribbon.c берётся оттуда, только если там
+#                лежит пришпиленный коммит; иначе — по сети (см. пункт 1)
 #   TMPDIR       где держать черновик (по умолчанию /tmp)
 #
 # ИМЕНА ПЕРЕМЕННЫХ ЛАТИНИЦЕЙ: ни dash, ни bash не принимают кириллицу в именах.
@@ -53,23 +54,46 @@ trap cleanup EXIT INT TERM
 work=$(mktemp -d "${TMPDIR:-/tmp}/flang-ribbon-compare.XXXXXXXX")
 
 # ── 1. Эталон ───────────────────────────────────────────────────────────────
+# Эталон здесь ВСЕГДА на пришпиленном коммите. `$DIGITWM` — не источник эталона,
+# а КЭШ клона: из него берётся `ribbon.c` ровно тогда, когда там лежит пин, и
+# никогда иначе; нет пина — эталон приходит по сети.
+#
+# ПОЧЕМУ НЕ «ЧТО ЛЕЖИТ В $DIGITWM, ТО И ЭТАЛОН». Ту же переменную ставит и тот,
+# кому нужен не эталон, а собранный `cwm` (`tools/insert.sh`, восьмой
+# отрицательный контроль), и клон у него по делу на master. Так ствол и
+# покраснел 2026-09-05 (прогон 33967669223): шаг конвейера завёл
+# `DIGITWM=/tmp/digitwm` с master-клоном, сверка уткнулась в чужой отпечаток
+# `ribbon.c` и покраснела НЕ расхождением — а седьмой отрицательный контроль
+# ждёт от неё именно расхождения и справедливо ей не поверил. Пин здесь
+# сильнее переменной среды, и повторить это уже нечем.
+taken=
 if [ -n "${DIGITWM:-}" ]; then
-  [ -f "$DIGITWM/ribbon.c" ] || { err "в \$DIGITWM нет ribbon.c: $DIGITWM"; exit 3; }
-  cp "$DIGITWM/ribbon.c" "$work/ribbon.c"
-  echo "эталон взят из \$DIGITWM: $DIGITWM"
-else
+  if [ -f "$DIGITWM/ribbon.c" ] &&
+     [ "$(sha256sum "$DIGITWM/ribbon.c" | awk '{print $1}')" = "$PIN_RIBBON_SHA256" ]; then
+    cp "$DIGITWM/ribbon.c" "$work/ribbon.c"
+    taken="\$DIGITWM ($DIGITWM) — там пин"
+  elif git -C "$DIGITWM" cat-file -e "$PIN:ribbon.c" 2>/dev/null; then
+    git -C "$DIGITWM" show "$PIN:ribbon.c" > "$work/ribbon.c"
+    taken="клон \$DIGITWM ($DIGITWM), коммит $PIN"
+  else
+    echo "в \$DIGITWM ($DIGITWM) пина нет — эталон беру по сети, а не оттуда"
+  fi
+fi
+if [ -z "$taken" ]; then
   git clone -q --filter=blob:none --no-checkout \
       https://github.com/digitable-lol/digitwm.git "$work/digitwm"
   ( cd "$work/digitwm" && git checkout -q "$PIN" -- ribbon.c )
   cp "$work/digitwm/ribbon.c" "$work/ribbon.c"
-  echo "эталон: digitable-lol/digitwm, коммит $PIN"
+  taken="digitable-lol/digitwm, коммит $PIN"
 fi
+echo "эталон: $taken"
 
 have=$(sha256sum "$work/ribbon.c" | awk '{print $1}')
 if [ "$have" != "$PIN_RIBBON_SHA256" ]; then
   err "ribbon.c не тот, с которым сверялись:"
   err "  ждали  $PIN_RIBBON_SHA256"
   err "  видим  $have"
+  err "Взят он был отсюда: $taken"
   err "Эталон изменился. Перегоните сверку, обновите примеры в модулях и пин здесь."
   exit 1
 fi
@@ -613,7 +637,11 @@ for f in "$ROOT"/flang/*.flang; do
   grep -rl flangprogram "$work/go-$m" | while read -r x; do
     sed -i.bak "s|flangprogram|flang$m|g" "$x" && rm -f "$x.bak"
   done
-  ( cd "$work/go-$m" && go build -o "$work/gocli-$m" ./cli )
+  # `-buildvcs=false` — не украшение: собирается напечатанное во временном
+  # каталоге, никакого репозитория при нём нет, а go всё равно зовёт `git` и
+  # падает «error obtaining VCS status: exit status 128» на машинах, где git в
+  # /tmp отвечает 128. Отпечаток VCS в оснастке сверки не нужен вовсе.
+  ( cd "$work/go-$m" && go build -buildvcs=false -o "$work/gocli-$m" ./cli )
   gomods=$((gomods + 1))
 done
 echo "напечатано в Go модулей: $gomods, прогонщики собраны (сверяются четыре: у"

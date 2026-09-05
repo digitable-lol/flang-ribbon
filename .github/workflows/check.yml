@@ -84,6 +84,15 @@ jobs:
       # отрицательному контролю. Собирается из клона digitwm - тремя
       # библиотеками X и yacc, - а арифметику ленты он берёт из СВОЕГО
       # подмодуля, на своём отпечатке: эталон обязан оставаться эталоном.
+      #
+      # ОТДАЁТСЯ ИМЕННО `CWM`, А НЕ `DIGITWM`, И ЭТО НЕ ВКУСОВЩИНА. Клон здесь
+      # на master и нужен ради двоичного; `DIGITWM` же для `tools/compare.sh`
+      # значит другое - клон эталона на ПРИШПИЛЕННОМ коммите. Отданный на весь
+      # job `DIGITWM=/tmp/digitwm` подсунул сверке master-ribbon.c, та вышла
+      # кодом 1 на отпечатке, и отрицательный контроль (седьмой) свалил ствол
+      # жалобой «покраснела, но расхождения не назвала» - прогон 33967669223.
+      # `CWM` понимают и `tools/insert.sh`, и восьмой контроль; сверка же
+      # клонирует свой пин сама, как и до появления этого шага.
       - name: Оконный менеджер digitwm — для сверки лент
         run: |
           sudo apt-get update -qq
@@ -91,7 +100,7 @@ jobs:
           git clone --recursive --depth 1 https://github.com/digitable-lol/digitwm.git /tmp/digitwm
           make -C /tmp/digitwm/ribbon-flang emit
           make -C /tmp/digitwm
-          echo "DIGITWM=/tmp/digitwm" >> "$GITHUB_ENV"
+          echo "CWM=/tmp/digitwm/cwm" >> "$GITHUB_ENV"
 
       - name: Оба обещания ленты на 896 лентах
         run: ./ярлык сетка

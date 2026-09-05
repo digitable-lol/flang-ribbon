@@ -173,7 +173,7 @@ each time:
 | a broken module | `flang check --proof` — **and it is shown that the same command through `\| tail -8` returns 0** |
 | a broken module | `flang emit` — with not a single file written |
 | a planted copyleft file, `.py`, `.c` | the licence guard (three times) |
-| the gap arithmetic off by one | `tools/compare.sh` — naming the discrepancies |
+| the gap arithmetic off by one | `tools/compare.sh` — naming the discrepancies, **and it is shown first that the same comparison is green on an untouched copy** |
 | **C's answer** shifted by one — seven mutants, one per kind of output line | `./ярлык вставка` — naming the scenario and the line |
 | an invariant tightened into a falsehood | the walk over 896 ribbons — by the postcondition, named |
 
